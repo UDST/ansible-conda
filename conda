@@ -222,7 +222,7 @@ def _update_package(module, conda, installed, name):
 
     command = [
         conda,
-        update,
+        'update',
         '--yes',
         name
     ]
