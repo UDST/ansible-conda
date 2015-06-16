@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 DOCUMENTATION = """
 ---
@@ -77,14 +78,14 @@ def _find_conda(module, executable):
 def _add_channels_to_command(command, channels):
     """
     Add extra channels to a conda command by splitting the channels
-    and putting -c before each one.
+    and putting "--channel" before each one.
 
     """
     if channels:
         channels = channels.strip().split()
         dashc = []
-        for c in channels:
-            dashc.append('-c')
+        for channel in channels:
+            dashc.append('--channel')
             dashc.append(channel)
 
         return command[:2] + dashc + command[2:]
@@ -140,6 +141,7 @@ def _remove_package(module, conda, installed, name):
     command = [
         conda,
         'remove',
+        '--yes',
         name
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
@@ -174,6 +176,7 @@ def _install_package(
     command = [
         conda,
         'install',
+        '--yes',
         install_str
     ]
     command = _add_channels_to_command(command, module.params['channels'])
@@ -220,7 +223,8 @@ def _update_package(module, conda, installed, name):
 
     command = [
         conda,
-        update,
+        'update',
+        '--yes',
         name
     ]
     command = _add_channels_to_command(command, module.params['channels'])
