@@ -155,11 +155,11 @@ def _remove_package(module, conda, installed, name):
 def _install_package(
         module, conda, installed, name, version, installed_version):
     """
-    Install a package at a specific version, or the latest version if no
-    version is specified.
+    Install a package at a specific version, or install a missing package at
+    the latest version if no version is specified.
 
     """
-    if installed and installed_version == version:
+    if installed and (version is None or installed_version == version):
         module.exit_json(changed=False, name=name, version=version)
 
     if module.check_mode:
