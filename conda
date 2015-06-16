@@ -77,14 +77,14 @@ def _find_conda(module, executable):
 def _add_channels_to_command(command, channels):
     """
     Add extra channels to a conda command by splitting the channels
-    and putting -c before each one.
+    and putting "--channel" before each one.
 
     """
     if channels:
         channels = channels.strip().split()
         dashc = []
-            dashc.append('-c')
         for channel in channels:
+            dashc.append('--channel')
             dashc.append(channel)
 
         return command[:2] + dashc + command[2:]
