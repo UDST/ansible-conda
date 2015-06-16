@@ -140,6 +140,7 @@ def _remove_package(module, conda, installed, name):
     command = [
         conda,
         'remove',
+        '--yes',
         name
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
@@ -174,6 +175,7 @@ def _install_package(
     command = [
         conda,
         'install',
+        '--yes',
         install_str
     ]
     command = _add_channels_to_command(command, module.params['channels'])
@@ -221,6 +223,7 @@ def _update_package(module, conda, installed, name):
     command = [
         conda,
         update,
+        '--yes',
         name
     ]
     command = _add_channels_to_command(command, module.params['channels'])
