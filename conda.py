@@ -116,6 +116,7 @@ def _check_installed(module, conda, name):
         'list',
         '^' + name + '$'  # use regex to get an exact match
     ]
+    command = _add_extras_to_command(command, module.params['extra_args'])
 
     rc, stdout, stderr = module.run_command(command)
 
