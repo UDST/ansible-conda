@@ -53,21 +53,21 @@ EXAMPLES = """
   conda: name=matplotlib state=absent
 """
 
+from distutils.spawn import find_executable
 import os.path
 
 
 def _find_conda(module, executable):
     """
-    Search in some likely places for the conda executable.
-    Currently: ~/.miniconda, ~/miniconda, ~/.miniconda3, and ~/miniconda3.
+    If `executable` is not None, checks whether it points to a valid file
+    and returns it if this is the case. Otherwise tries to find the `conda`
+    executable in the path. Calls `fail_json` if either of these fail.
 
     """
     if not executable:
-        locs = {'~/.miniconda', '~/miniconda', '~/.miniconda3', '~/miniconda3'}
-        for l in locs:
-            conda = os.path.expanduser(os.path.join(l, 'bin/conda'))
-            if os.path.isfile(conda):
-                return conda
+        conda = find_executable('conda')
+        if conda:
+            return conda
     else:
         if os.path.isfile(executable):
             return executable
