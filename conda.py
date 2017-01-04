@@ -55,6 +55,7 @@ EXAMPLES = """
 
 from distutils.spawn import find_executable
 import os.path
+import json
 
 
 def _find_conda(module, executable):
@@ -113,7 +114,8 @@ def _check_installed(module, conda, name):
     """
     command = [
         conda,
-        'list'
+        'list',
+        '--json'
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
 
@@ -125,14 +127,12 @@ def _check_installed(module, conda, name):
     installed = False
     version = None
     
-    # Each line of output of `conda list` has the format:
-    # "requests                  2.11.1                   py35_0    defaults"
-    for line in stdout.strip().split('\n'):
-        if name in line:
-            match = line.split()
-            if name == match[0]: # an actual match
-                installed = True
-                version = match[1]
+    data = json.loads(stdout)
+    for item in data:
+        pname, pversion, pdist = item.rsplit('-', 2)
+        if pname.endswith(name): # an actual match
+            installed = True
+            version = pversion
 
     return installed, version
 
