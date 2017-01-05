@@ -115,6 +115,7 @@ def _check_installed(module, conda, name):
     command = [
         conda,
         'list',
+        '^' + name + '$'
         '--json'
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
@@ -128,9 +129,17 @@ def _check_installed(module, conda, name):
     version = None
     
     data = json.loads(stdout)
-    for item in data:
-        pname, pversion, pdist = item.rsplit('-', 2)
-        if pname.endswith(name): # an actual match
+    if data:
+        # At this point data will be a list of len 1, with the element of
+        # the format: "channel::package-version-py35_1"
+        line = data[0]
+        if "::" in line:
+            channel, other = line.split('::')
+        else:
+            other = line
+        # split carefully as some package names have "-" in them (scikit-learn)
+        pname, pversion, pdist = other.rsplit('-', 2)
+        if pname == name: # verify match for safety
             installed = True
             version = pversion
 
