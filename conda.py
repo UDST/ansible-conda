@@ -115,7 +115,7 @@ def _check_installed(module, conda, name):
     command = [
         conda,
         'list',
-        '^' + name + '$'
+        '^' + name + '$',
         '--json'
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
