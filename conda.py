@@ -55,6 +55,7 @@ EXAMPLES = """
 
 from distutils.spawn import find_executable
 import os.path
+import json
 
 
 def _find_conda(module, executable):
@@ -114,7 +115,8 @@ def _check_installed(module, conda, name):
     command = [
         conda,
         'list',
-        '^' + name + '$'  # use regex to get an exact match
+        '^' + name + '$',
+        '--json'
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
 
@@ -123,9 +125,25 @@ def _check_installed(module, conda, name):
     if rc != 0:
         return False, None
 
-    version = stdout.strip().split()[-2]
+    installed = False
+    version = None
+    
+    data = json.loads(stdout)
+    if data:
+        # At this point data will be a list of len 1, with the element of
+        # the format: "channel::package-version-py35_1"
+        line = data[0]
+        if "::" in line:
+            channel, other = line.split('::')
+        else:
+            other = line
+        # split carefully as some package names have "-" in them (scikit-learn)
+        pname, pversion, pdist = other.rsplit('-', 2)
+        if pname == name: # verify match for safety
+            installed = True
+            version = pversion
 
-    return True, version
+    return installed, version
 
 
 def _remove_package(module, conda, installed, name):
