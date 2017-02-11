@@ -211,6 +211,9 @@ def _install_package(
     if rc != 0:
         module.fail_json(msg='failed to install package ' + name)
 
+    if 'requested packages already installed' in stdout:
+        module.exit_json(changed=False, name=name)
+
     module.exit_json(
         changed=True, name=name, version=version, stdout=stdout, stderr=stderr)
 
