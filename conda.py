@@ -129,7 +129,7 @@ def _check_installed(module, conda, name):
     version = None
     
     data = json.loads(stdout)
-    if data:
+    if data and type(data[0]) is str:
         # At this point data will be a list of len 1, with the element of
         # the format: "channel::package-version-py35_1"
         line = data[0]
@@ -142,6 +142,11 @@ def _check_installed(module, conda, name):
         if pname == name: # verify match for safety
             installed = True
             version = pversion
+    elif data and type(data[0]) is dict:
+        # conda 4.3 now returns a dictionary
+        if data[0]['name'] == name:
+            installed = True
+            version = data[0]['version']
 
     return installed, version
 
