@@ -107,7 +107,7 @@ def _add_extras_to_command(command, extras):
         return command
 
 
-def _check_installed(module, conda, name):
+def _check_installed(module, conda, name, version):
     """
     Check whether a package is installed. Returns (bool, version_str).
 
@@ -122,28 +122,38 @@ def _check_installed(module, conda, name):
 
     rc, stdout, stderr = module.run_command(command)
 
-    if rc != 0:
-        return False, None
+    # ignore condas broken exit code
+    #if rc != 0:
+    #    return False, None
 
-    installed = False
-    version = None
-    
-    data = json.loads(stdout)
+    try:
+        data = json.loads(stdout)
+    except:
+        module.fail_json(msg="invalid answer from conda. We don't know if successfull with conda install %s" % name)
+
     if data:
-        # At this point data will be a list of len 1, with the element of
-        # the format: "channel::package-version-py35_1"
-        line = data[0]
-        if "::" in line:
-            channel, other = line.split('::')
-        else:
-            other = line
-        # split carefully as some package names have "-" in them (scikit-learn)
-        pname, pversion, pdist = other.rsplit('-', 2)
-        if pname == name: # verify match for safety
-            installed = True
-            version = pversion
 
-    return installed, version
+        for pkg in data:
+            if isinstance(pkg, basestring):
+                # conda returned only the package version
+                # package may have been originally installed with pip
+                try:
+                    ver = pkg[len(name) + 1:]
+                    if ver.endswith("-py27_0"):
+                        ver = ver[0:-7]
+
+                        return (True, ver)
+                except:
+                    pass
+
+            elif isinstance(pkg, dict):
+                if version is None:
+                    return (True, pkg["version"])
+
+                if pkg["version"] == version:
+                    return (True, version)
+
+    return False, None
 
 
 def _remove_package(module, conda, installed, name):
@@ -161,16 +171,28 @@ def _remove_package(module, conda, installed, name):
         conda,
         'remove',
         '--yes',
+        '--quiet',
+        '--json',
         name
     ]
     command = _add_extras_to_command(command, module.params['extra_args'])
 
     rc, stdout, stderr = module.run_command(command)
 
-    if rc != 0:
-        module.fail_json(msg='failed to remove package ' + name)
+    # ignore condas broken exit code
+    #if rc != 0:
+    #    module.fail_json(msg='failed to remove package ' + name)
 
-    module.exit_json(changed=True, name=name, stdout=stdout, stderr=stderr)
+    try:
+        data = json.loads(stdout)
+    except:
+         module.fail_json(msg="invalid answer from conda. We don't know if successfull with conda remove %s" % name)
+
+    if data and "success" in data and data["success"]:
+        module.exit_json(
+            changed=True, name=name, stdout=stdout, stderr=stderr)
+
+    module.fail_json(msg='failed to install package ' + name)
 
 
 def _install_package(
@@ -195,7 +217,9 @@ def _install_package(
     command = [
         conda,
         'install',
+        '--quiet',
         '--yes',
+        '--json',
         install_str
     ]
     command = _add_channels_to_command(command, module.params['channels'])
@@ -203,11 +227,21 @@ def _install_package(
 
     rc, stdout, stderr = module.run_command(command)
 
-    if rc != 0:
-        module.fail_json(msg='failed to install package ' + name)
 
-    module.exit_json(
-        changed=True, name=name, version=version, stdout=stdout, stderr=stderr)
+    # ignore conda broken return value
+    #if rc != 0:
+    #    module.fail_json(msg='failed to install package ' + name)
+
+    try:
+        data = json.loads(stdout)
+    except:
+         module.fail_json(msg="invalid answer from conda. We don't know if successfull with %s" % name)
+
+    if data and "success" in data and data["success"]:
+        module.exit_json(
+            changed=True, name=name, version=version, stdout=stdout, stderr=stderr)
+
+    module.fail_json(msg='failed to install package ' + name)
 
 
 def _update_package(module, conda, installed, name):
@@ -278,7 +312,15 @@ def main():
     state = module.params['state']
     version = module.params['version']
 
-    installed, installed_version = _check_installed(module, conda, name)
+    old_name = name
+    if "=" in name:
+        try:
+            name,version = name.split("=")
+        except:
+            module.fail_json(msg="Invalid name '%s'" % name)
+            return
+
+    installed, installed_version = _check_installed(module, conda, name, version)
 
     if state == 'absent':
         _remove_package(module, conda, installed, name)
