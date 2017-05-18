@@ -107,7 +107,7 @@ def _add_extras_to_command(command, extras):
         return command
 
 
-def _check_installed(module, conda, name):
+def _check_installed(module, conda, name, version):
     """
     Check whether a package is installed. Returns (bool, version_str).
 
@@ -278,7 +278,15 @@ def main():
     state = module.params['state']
     version = module.params['version']
 
-    installed, installed_version = _check_installed(module, conda, name)
+    old_name = name
+    if "=" in name:
+        try:
+            name,version = name.split("=")
+        except:
+            module.fail_json(msg="Invalid name '%s'" % name)
+            return
+
+    installed, installed_version = _check_installed(module, conda, name, version)
 
     if state == 'absent':
         _remove_package(module, conda, installed, name)
