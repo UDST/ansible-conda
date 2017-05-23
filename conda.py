@@ -137,8 +137,14 @@ def _check_installed(module, conda, name):
             channel, other = line.split('::')
         else:
             other = line
-        # split carefully as some package names have "-" in them (scikit-learn)
-        pname, pversion, pdist = other.rsplit('-', 2)
+        
+        if isinstance(other, dict):
+            pname = other.get('name', '')
+            pversion = other.get('version', '')
+        else:
+            # split carefully as some package names have "-" in them (scikit-learn)
+            pname, pversion, pdist = other.rsplit('-', 2)
+
         if pname == name: # verify match for safety
             installed = True
             version = pversion
