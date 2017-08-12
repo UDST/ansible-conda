@@ -138,7 +138,15 @@ def _check_installed(module, conda, name):
         else:
             other = line
         # split carefully as some package names have "-" in them (scikit-learn)
-        pname, pversion, pdist = other.rsplit('-', 2)
+        try:
+            # for conda >= 4.3, `other` should be a dict
+            pname = other['name']
+            pversion = other['version']
+            pdist = other.get('build_string') or other['build']
+        except TypeError:
+            # parse legacy string version for information
+            pname, pversion, pdist = other.rsplit('-', 2)
+
         if pname == name: # verify match for safety
             installed = True
             version = pversion
