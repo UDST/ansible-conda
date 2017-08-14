@@ -107,6 +107,16 @@ def _add_extras_to_command(command, extras):
         return command
 
 
+def _are_versions_equal(version_a, version_b):
+    """
+    Checks whether two versions are equal.
+    :param version_a: the first version
+    :param version_b: the first version
+    :return: `True` if versions are equal
+    """
+    return version_a.rstrip(".0") == version_b.rstrip(".0")
+
+
 def _check_installed(module, conda, name):
     """
     Check whether a package is installed. Returns (bool, version_str).
@@ -127,7 +137,7 @@ def _check_installed(module, conda, name):
 
     installed = False
     version = None
-    
+
     data = json.loads(stdout)
     if data:
         # At this point data will be a list of len 1, with the element of
@@ -186,7 +196,7 @@ def _install_package(
     the latest version if no version is specified.
 
     """
-    if installed and (version is None or installed_version == version):
+    if installed and (version is None or _are_versions_equal(installed_version, version)):
         module.exit_json(changed=False, name=name, version=version)
 
     if module.check_mode:
