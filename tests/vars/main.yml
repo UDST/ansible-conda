@@ -3,4 +3,5 @@
 # XXX: better to hit local package repository with dummy package
 conda_tests_install_example: translationstring
 conda_tests_minimum_latest_version: "1.3"
+conda_tests_minimum_latest_major_version: "1"
 conda_tests_old_version: "1.1"

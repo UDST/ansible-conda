@@ -14,6 +14,11 @@
     - include: tear-down.yml
 
 - block:
+    - include: test-install-loosely-fixed-version.yml
+  always:
+    - include: tear-down.yml
+
+- block:
     - include: test-upgrade.yml
   always:
     - include: tear-down.yml
