@@ -1,8 +1,24 @@
 ---
 
 - include: install.yml
+- include: tear-down.yml
 
 - block:
-    - include: test-new-install.yml
+    - include: test-install-latest.yml
+  always:
+    - include: tear-down.yml
+
+- block:
+    - include: test-install-fixed-version.yml
+  always:
+    - include: tear-down.yml
+
+- block:
+    - include: test-upgrade.yml
+  always:
+    - include: tear-down.yml
+
+- block:
+    - include: test-downgrade.yml
   always:
     - include: tear-down.yml

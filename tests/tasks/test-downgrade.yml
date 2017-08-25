@@ -1,0 +1,23 @@
+---
+
+- name: install latest package via conda
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: latest
+    executable: "{{ conda_tests_conda_executable }}"
+
+- name: install old package via conda
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    version: "{{ conda_tests_old_version }}"
+    state: present
+    executable: "{{ conda_tests_conda_executable }}"
+  register: second_install
+
+- include: install-facts.yml
+
+- name: verify installed
+  assert:
+    that: second_install.changed
+    that: example_package.installed
+    that: example_package.version | version_compare(conda_tests_old_version, '=')

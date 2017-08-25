@@ -1,4 +1,6 @@
 ---
 
-conda_tests_install_example: uuid
-conda_tests_minimum_latest_version: "1.30"
+# XXX: better to hit local package repository with dummy package
+conda_tests_install_example: isort
+conda_tests_minimum_latest_version: "4.2.15"
+conda_tests_old_version: "4.2.5"
