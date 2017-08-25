@@ -14,7 +14,7 @@
     executable: "{{ conda_tests_conda_executable }}"
   register: second_install
 
-- include: install-facts.yml
+- include: set-install-facts.yml
 
 - name: verify installed
   assert:

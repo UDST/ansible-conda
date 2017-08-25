@@ -8,9 +8,9 @@
     executable: "{{ conda_tests_conda_executable }}"
   register: first_install
 
-- include: install-facts.yml
+- include: set-install-facts.yml
 
-- name: Verify installed
+- name: verify installed
   assert:
     that: first_install.changed
     that: example_package.installed

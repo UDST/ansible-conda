@@ -1,18 +1,18 @@
 ---
 
-- name: Find installed Conda matching packages
+- name: find installed Conda matching packages
   shell: "{{ conda_tests_conda_executable }} search --json {{ conda_tests_install_example }}"
   register: installed_raw
 
-- name: Filter output
+- name: filter output
   set_fact:
     installed: "{{ (installed_raw.stdout | from_json | json_query('%s[?installed]' % conda_tests_install_example)) }}"
 
-- name: Ensure expected environment
+- name: ensure expected environment
   assert:
     that: installed | length <= 1
 
-- name: Set return variable
+- name: set install facts
   set_fact:
     example_package:
       installed: "{{ installed | length != 0 }}"

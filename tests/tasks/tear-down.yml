@@ -6,7 +6,7 @@
     state: absent
     executable: "{{ conda_tests_conda_executable }}"
 
-- include: install-facts.yml
+- include: set-install-facts.yml
 
 - name: verify package not installed
   assert:
