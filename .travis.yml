@@ -1,0 +1,23 @@
+---
+
+sudo: required
+
+language: python
+python: "2.7"
+
+env:
+  - ANSIBLE_ROLES_PATH: ~/.ansible-roles
+
+before_install:
+  - deactivate
+  - which python
+  - mkdir $ANSIBLE_ROLES_PATH
+  - sudo apt update
+
+install:
+  - sudo apt install python-apt
+  - pip install ansible
+  - ansible-galaxy install -r tests/requirements.yml
+
+script:
+  - ansible-playbook -vvv -e ansible_python_interpreter=$(which python) -c local tests/site.yml
