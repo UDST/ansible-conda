@@ -1,0 +1,7 @@
+---
+
+- name: install package via Conda
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: absent
+    executable: "{{ conda_tests_conda_executable }}"

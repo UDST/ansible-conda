@@ -1,0 +1,10 @@
+---
+
+dependencies:
+  - role: anaconda
+    vars:
+      anaconda_python_ver: "{{ conda_tests_python_version }}"
+      anaconda_ver: "{{ conda_tests_anaconda_version }}"
+      anaconda_pkg_update: no
+      anaconda_parent_dir: "{{ conda_tests_anaconda_installation_location | dirname }}"
+      anaconda_link_subdir: "{{ conda_tests_anaconda_installation_location | basename }}"

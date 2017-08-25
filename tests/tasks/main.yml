@@ -1,0 +1,8 @@
+---
+
+- include: install.yml
+
+- block:
+    - include: test-new-install.yml
+  always:
+    - include: tear-down.yml

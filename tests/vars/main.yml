@@ -1,0 +1,4 @@
+---
+
+conda_tests_install_example: uuid
+conda_tests_minimum_latest_version: "1.30"
