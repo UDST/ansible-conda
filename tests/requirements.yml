@@ -1,0 +1,5 @@
+---
+
+- name: anaconda
+  src: https://github.com/wtsi-hgi/ansible-anaconda.git
+  version: 60ac57016facaf8658437ca4700f4037b60be42e

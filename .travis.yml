@@ -1,0 +1,12 @@
+---
+
+sudo: required
+
+services:
+  - docker
+
+install:
+  - docker build -t test-runner -f Dockerfile.test .
+
+script:
+  - docker run --rm -t -v $PWD:/ansible-conda test-runner
