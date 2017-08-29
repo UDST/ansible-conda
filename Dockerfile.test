@@ -1,0 +1,28 @@
+FROM ubuntu
+
+ENV DATA_DIRECTORY=/ansible-conda
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python \
+        python-pip \
+        python-apt \
+        python-dev \
+        build-essential \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install setuptools wheel
+RUN pip install ansible==2.3.2.0
+
+ADD tests/requirements.yml /tmp/requirements.yml
+RUN ansible-galaxy install -r /tmp/requirements.yml
+
+ADD tests/requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+VOLUME "${DATA_DIRECTORY}"
+
+CMD ansible-galaxy install -r "${DATA_DIRECTORY}/tests/requirements.yml" \
+        && pip install -r "${DATA_DIRECTORY}/tests/requirements.txt" \
+        && ansible-playbook -vvv -e ansible_python_interpreter=$(which python) -c local "${DATA_DIRECTORY}/tests/site.yml"

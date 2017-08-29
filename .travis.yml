@@ -2,22 +2,11 @@
 
 sudo: required
 
-language: python
-python: "2.7"
-
-env:
-  - ANSIBLE_ROLES_PATH: ~/.ansible-roles
-
-before_install:
-  - deactivate
-  - which python
-  - mkdir $ANSIBLE_ROLES_PATH
-  - sudo apt update
+services:
+  - docker
 
 install:
-  - sudo apt install python-apt
-  - pip install ansible
-  - ansible-galaxy install -r tests/requirements.yml
+  - docker build -t test-runner -f Dockerfile.test .
 
 script:
-  - ansible-playbook -vvv -e ansible_python_interpreter=$(which python) -c local tests/site.yml
+  - docker run --rm -v $PWD:/ansible-conda test-runner
