@@ -174,7 +174,7 @@ def _remove_package(module, conda, installed, name):
     rc, stdout, stderr = module.run_command(command)
 
     if rc != 0:
-        module.fail_json(msg='failed to remove package ' + name)
+        module.fail_json(msg='failed to remove package ' + name, stderr=stderr)
 
     module.exit_json(changed=True, name=name, stdout=stdout, stderr=stderr)
 
@@ -210,7 +210,7 @@ def _install_package(
     rc, stdout, stderr = module.run_command(command)
 
     if rc != 0:
-        module.fail_json(msg='failed to install package ' + name)
+        module.fail_json(msg='failed to install package ' + name, stderr=stderr)
 
     module.exit_json(
         changed=True, name=name, version=version, stdout=stdout, stderr=stderr)
@@ -237,7 +237,7 @@ def _update_package(module, conda, installed, name):
     rc, stdout, stderr = module.run_command(command)
 
     if rc != 0:
-        module.fail_json(msg='can\'t update a package that is not installed')
+        module.fail_json(msg='can\'t update a package that is not installed', stderr=stderr)
 
     if 'requested packages already installed' in stdout:
         module.exit_json(changed=False, name=name)
@@ -258,7 +258,7 @@ def _update_package(module, conda, installed, name):
     rc, stdout, stderr = module.run_command(command)
 
     if rc != 0:
-        module.fail_json(msg='failed to update package ' + name)
+        module.fail_json(msg='failed to update package ' + name, stderr=stderr)
 
     module.exit_json(changed=True, name=name, stdout=stdout, stderr=stderr)
 
