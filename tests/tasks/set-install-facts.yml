@@ -1,7 +1,7 @@
 ---
 
 - name: find installed Conda matching packages
-  shell: "{{ conda_tests_conda_executable }} search --json {{ conda_tests_install_example }}"
+  shell: "{{ conda_tests_conda_executable }} search --json ^{{ conda_tests_install_example }}$"
   no_log: True
   register: installed_raw
 
