@@ -4,6 +4,11 @@
 - include: tear-down.yml
 
 - block:
+    - include: test-uninstall.yml
+  always:
+    - include: tear-down.yml
+
+- block:
     - include: test-install-latest.yml
   always:
     - include: tear-down.yml

@@ -28,6 +28,11 @@
   assert:
     that: not second_install.changed
 
+
+- name: verify setup for testing package upgrade
+  assert:
+    that: conda_tests_old_version.split('.')[0] == conda_tests_minimum_latest_major_version
+
 - name: install older conda package
   conda:
     name: "{{ conda_tests_install_example }}"
