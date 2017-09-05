@@ -32,3 +32,8 @@
     - include: test-downgrade.yml
   always:
     - include: tear-down.yml
+
+- block:
+    - include: test-invalid-setups.yml
+  always:
+    - include: tear-down.yml
