@@ -1,6 +1,6 @@
 ---
 
-- name: install conda package
+- name: install Conda package using major version number
   conda:
     name: "{{ conda_tests_install_example }}"
     version: "{{ conda_tests_minimum_latest_major_version }}"
@@ -16,7 +16,7 @@
     that: example_package.installed
     that: example_package.version | version_compare(conda_tests_minimum_latest_version, '>=')
 
-- name: install conda package (again)
+- name: install Conda package using major version number (again)
   conda:
     name: "{{ conda_tests_install_example }}"
     version: "{{ conda_tests_minimum_latest_major_version }}"
@@ -33,14 +33,14 @@
   assert:
     that: conda_tests_old_version.split('.')[0] == conda_tests_minimum_latest_major_version
 
-- name: install older conda package
+- name: install older Conda package
   conda:
     name: "{{ conda_tests_install_example }}"
     version: "{{ conda_tests_old_version }}"
     state: present
     executable: "{{ conda_tests_conda_executable }}"
 
-- name: upgrade conda package
+- name: upgrade Conda package
   conda:
     name: "{{ conda_tests_install_example }}"
     version: "{{ conda_tests_minimum_latest_major_version }}"

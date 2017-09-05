@@ -1,6 +1,6 @@
 ---
 
-- name: install package via conda
+- name: install latest version of the Conda package
   conda:
     name: "{{ conda_tests_install_example }}"
     state: latest
@@ -15,7 +15,9 @@
     that: example_package.installed
     that: example_package.version | version_compare(conda_tests_minimum_latest_version, '>=')
 
-- name: install package via conda (again)
+# TODO: Until tests are ran against local package repository, this test would be flaky in the (rare) case that the
+# package is updated mid-test
+- name: install latest version of the Conda package (again)
   conda:
     name: "{{ conda_tests_install_example }}"
     state: latest

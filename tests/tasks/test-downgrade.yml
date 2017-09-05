@@ -1,12 +1,12 @@
 ---
 
-- name: install latest package via conda
+- name: install latest Conda package
   conda:
     name: "{{ conda_tests_install_example }}"
     state: latest
     executable: "{{ conda_tests_conda_executable }}"
 
-- name: install old package via conda
+- name: install old Conda package
   conda:
     name: "{{ conda_tests_install_example }}"
     version: "{{ conda_tests_old_version }}"
