@@ -76,7 +76,7 @@ def _find_conda(module, executable):
     module.fail_json(msg="could not find conda executable")
 
 
-def _add_channels_to_command(command, channels):
+def add_channels_to_command(command, channels):
     """
     Add extra channels to a conda command by splitting the channels
     and putting "--channel" before each one.
@@ -93,7 +93,7 @@ def _add_channels_to_command(command, channels):
         return command
 
 
-def _add_extras_to_command(command, extras):
+def add_extras_to_command(command, extras):
     """
     Add extra arguments to a conda command by splitting the arguments
     on white space and inserting them after the second item in the command.
@@ -105,14 +105,27 @@ def _add_extras_to_command(command, extras):
         return command
 
 
-def _parse_stdout_as_json(stdout):
+def parse_conda_stdout(stdout):
     """
-    Parses the given output from stdout as JSON.
+    Parses the given output from Conda.
     :param stdout: the output from stdout
     :return: standard out as parsed JSON else `None` if non-JSON format
     """
+    # Conda spews loading progress reports onto stdout(!?), which need ignoring. Bug observed in Conda version 4.3.25.
+    split_lines = stdout.strip().split("\n")
+    while len(split_lines) > 0:
+        line = split_lines.pop(0)
+        try:
+            line_content = json.loads(line)
+            if "progress" not in line_content and "maxval" not in line_content:
+                # Looks like this was the output, not a progress update
+                return line_content
+        except ValueError:
+            split_lines.insert(0, line)
+            break
+
     try:
-        return json.loads(stdout)
+        return json.loads("".join(split_lines))
     except ValueError:
         return None
 
@@ -128,11 +141,11 @@ def _run_conda_command(module, command):
     written to standard error
     :raises CondaCommandError: if there a problem running Conda
     """
-    command = _add_channels_to_command(command, module.params['channels'])
-    command = _add_extras_to_command(command, module.params['extra_args'])
+    command = add_channels_to_command(command, module.params['channels'])
+    command = add_extras_to_command(command, module.params['extra_args'])
 
     rc, stdout, stderr = module.run_command(command)
-    parsed_stdout = _parse_stdout_as_json(stdout)
+    parsed_stdout = parse_conda_stdout(stdout)
 
     if rc != 0 or parsed_stdout is None:
         error_message = None
@@ -162,7 +175,7 @@ def _run_conda_package_command(module, name, version, command):
             raise
 
 
-def _get_install_target(name, version):
+def get_install_target(name, version):
     """
     Gets install target string for a package with the given name and version.
     :param name: the package name
@@ -185,7 +198,7 @@ def _check_package_installed(module, conda, name, version):
     :raises CondaUnexpectedOutputError: if the JSON returned by Conda was unexpected
     """
     output, stderr = _run_conda_package_command(
-        module, name, version, [conda, 'install', '--json', '--dry-run', _get_install_target(name, version)])
+        module, name, version, [conda, 'install', '--json', '--dry-run', get_install_target(name, version)])
 
     if 'message' in output and output['message'] == 'All requested packages already installed.':
         return True
@@ -199,7 +212,7 @@ def _install_package(module, conda, name, version=None):
     """
     Install a package with the given name and version. Version will default to latest if `None`.
     """
-    command = [conda, 'install', '--yes', '--json', _get_install_target(name, version)]
+    command = [conda, 'install', '--yes', '--json', get_install_target(name, version)]
     if module.check_mode:
         command.insert(-1, '--dry-run')
 
@@ -246,7 +259,7 @@ class CondaPackageNotFoundError(Exception):
         self.version = version
 
     def __str__(self):
-        return 'Conda package "%s" not found' % (_get_install_target(self.name, self.version))
+        return 'Conda package "%s" not found' % (get_install_target(self.name, self.version))
 
 
 class CondaUnexpectedOutputError(Exception):
@@ -287,7 +300,7 @@ def main():
     state = module.params['state']
     version = module.params['version']
 
-    if state == 'latest' and version != None:
+    if state == 'latest' and version is not None:
         module.fail_json(msg='`version` must not be set if `state == "latest"` (`latest` upgrades to newest version)')
 
     correct_version_installed = _check_package_installed(module, conda, name, version)
@@ -299,7 +312,7 @@ def main():
         try:
             _uninstall_package(module, conda, name)
         except CondaPackageNotFoundError:
-            pass
+            """ EAFP """
 
     module.exit_json(changed=False)
 
