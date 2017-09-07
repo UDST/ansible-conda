@@ -59,7 +59,86 @@ import json
 from ansible.module_utils.basic import AnsibleModule
 
 
-def _find_conda(module, executable):
+def run_package_operation(conda, name, version, state, dry_run, command_runner, on_failure, on_success):
+    """
+    Runs Conda package operation.
+
+    This method is intentionally decoupled from `AnsibleModule` to allow it to be easily tested in isolation.
+    :param conda: location of the Conda executable
+    :param name: name of the package of interest
+    :param version: version of the package (`None` for latest)
+    :param state: state the package should be in
+    :param dry_run: will "pretend" to make changes only if `True`
+    :param command_runner: method that executes a given Conda command (given as list of string arguments), which returns
+    JSON and returns a tuple where the first argument is the outputted JSON and the second is anything written to stderr
+    :param on_failure: method that takes any kwargs to be called on failure
+    :param on_success: method that takes any kwargs to be called on success
+    """
+    correct_version_installed = check_package_installed(command_runner, conda, name, version)
+
+    # TODO: State should be an "enum" (or whatever the Py2.7 equivalent is)
+    if not correct_version_installed and state != 'absent':
+        try:
+            output, stderr = install_package(command_runner, conda, name, version, dry_run=dry_run)
+            on_success(changed=True, output=output, error=stderr)
+        except CondaPackageNotFoundError:
+            on_failure(msg='Conda package "%s" not found' % (get_install_target(name, version, )))
+
+    elif state == 'absent':
+        try:
+            output, stderr = uninstall_package(command_runner, conda, name, dry_run=dry_run)
+            on_success(changed=True, output=output, error=stderr)
+        except CondaPackageNotFoundError:
+            on_success(changed=False)
+
+    else:
+        on_success(changed=False)
+
+
+def check_package_installed(command_runner, conda, name, version):
+    """
+    Check whether a package with the given name and version is installed.
+    :param command_runner: method that executes a given Conda command (given as list of string arguments), which returns
+    JSON and returns a tuple where the first argument is the outputted JSON and the second is anything written to stderr
+    :param name: the name of the package to check if installed
+    :param version: the version of the package to check if installed (`None` if check for latest)
+    :return: `True` if a package with the given name and version is installed
+    :raises CondaUnexpectedOutputError: if the JSON returned by Conda was unexpected
+    """
+    output, stderr = run_conda_package_command(
+        command_runner, name, version, [conda, 'install', '--json', '--dry-run', get_install_target(name, version)])
+
+    if 'message' in output and output['message'] == 'All requested packages already installed.':
+        return True
+    elif 'actions' in output and len(output['actions']) > 0:
+        return False
+    else:
+        raise CondaUnexpectedOutputError(output, stderr)
+
+
+def install_package(command_runner, conda, name, version=None, dry_run=False):
+    """
+    Install a package with the given name and version. Version will default to latest if `None`.
+    """
+    command = [conda, 'install', '--yes', '--json', get_install_target(name, version)]
+    if dry_run:
+        command.insert(-1, '--dry-run')
+
+    return run_conda_package_command(command_runner, name, version, command)
+
+
+def uninstall_package(command_runner, conda, name, dry_run=False):
+    """
+    Use Conda to remove a package with the given name.
+    """
+    command = [conda, 'remove', '--yes', '--json', name]
+    if dry_run:
+        command.insert(-1, '--dry-run')
+
+    return run_conda_package_command(command_runner, name, None, command)
+
+
+def find_conda(executable):
     """
     If `executable` is not None, checks whether it points to a valid file
     and returns it if this is the case. Otherwise tries to find the `conda`
@@ -73,7 +152,7 @@ def _find_conda(module, executable):
         if os.path.isfile(executable):
             return executable
 
-    module.fail_json(msg="could not find conda executable")
+    raise CondaExecutableNotFoundError()
 
 
 def add_channels_to_command(command, channels):
@@ -130,43 +209,17 @@ def parse_conda_stdout(stdout):
         return None
 
 
-def _run_conda_command(module, command):
-    """
-    Runs the given Conda related command.
-
-    It is assumed that the command will return JSON.
-    :param module: the Ansible module
-    :param command: the command to run
-    :return: tuple where the first element is the parsed JSON output returned by Conda and the second is what was
-    written to standard error
-    :raises CondaCommandError: if there a problem running Conda
-    """
-    command = add_channels_to_command(command, module.params['channels'])
-    command = add_extras_to_command(command, module.params['extra_args'])
-
-    rc, stdout, stderr = module.run_command(command)
-    parsed_stdout = parse_conda_stdout(stdout)
-
-    if rc != 0 or parsed_stdout is None:
-        error_message = None
-        if parsed_stdout is not None and 'message' in parsed_stdout:
-            error_message = parsed_stdout['message']
-        raise CondaCommandError(command, error_message, parsed_stdout, stdout, stderr)
-
-    return parsed_stdout, stderr
-
-
-def _run_conda_package_command(module, name, version, command):
+def run_conda_package_command(command_runner, name, version, command):
     """
     Runs a Conda command related to a particular package.
-    :param module: the Ansible module
+    :param command_runner: runner of Conda commands
     :param name: the name of the package the command refers to
     :param version: the version of the package that the command is referring to
     :param command: the Conda command
     :raises CondaPackageNotFoundError: if the package referred to by this command is not found
     """
     try:
-        return _run_conda_command(module, command)
+        return command_runner(command)
     except CondaCommandError as e:
         if e.output is not None and 'exception_name' in e.output \
                 and e.output['exception_name'] == 'PackageNotFoundError':
@@ -188,66 +241,21 @@ def get_install_target(name, version):
     return install_target
 
 
-def _check_package_installed(module, conda, name, version):
-    """
-    Check whether a package with the given name and version is installed.
-    :param module: the Ansible module
-    :param name: the name of the package to check if installed
-    :param version: the version of the package to check if installed (`None` if check for latest)
-    :return: `True` if a package with the given name and version is installed
-    :raises CondaUnexpectedOutputError: if the JSON returned by Conda was unexpected
-    """
-    output, stderr = _run_conda_package_command(
-        module, name, version, [conda, 'install', '--json', '--dry-run', get_install_target(name, version)])
-
-    if 'message' in output and output['message'] == 'All requested packages already installed.':
-        return True
-    elif 'actions' in output and len(output['actions']) > 0:
-        return False
-    else:
-        raise CondaUnexpectedOutputError(output, stderr)
-
-
-def _install_package(module, conda, name, version=None):
-    """
-    Install a package with the given name and version. Version will default to latest if `None`.
-    """
-    command = [conda, 'install', '--yes', '--json', get_install_target(name, version)]
-    if module.check_mode:
-        command.insert(-1, '--dry-run')
-
-    output, stderr = _run_conda_package_command(module, name, version, command)
-    module.exit_json(changed=True, name=name, version=version, output=output, error=stderr)
-
-
-def _uninstall_package(module, conda, name):
-    """
-    Use Conda to remove a package with the given name.
-    """
-    command = [conda, 'remove', '--yes', '--json', name]
-    if module.check_mode:
-        command.insert(-1, '--dry-run')
-
-    output, stderr = _run_conda_package_command(module, name, None, command)
-    module.exit_json(changed=True, output=output, error=stderr)
-
-
 class CondaCommandError(Exception):
     """
     Error raised when a Conda command fails.
     """
-    def __init__(self, command, error_message, output, stdout, stderr):
+    def __init__(self, command, output, stdout, stderr):
         self.command = command
-        self.error_message = error_message
         self.output = output
         self.stdout = stdout
         self.stderr = stderr
 
-    def __str__(self):
-        error_message = ' Error: %s.' % self.error_message if self.error_message is not None else ''
-        stdout = ' stdout: %s.' % self.stdout if self.error_message is None and self.stdout.strip() != '' else ''
+        error_message = ' Error: %s.' % self.output['message'] if output is not None and 'message' in output else ''
+        stdout = ' stdout: %s.' % self.stdout if error_message is '' and self.stdout.strip() != '' else ''
         stderr = ' stderr: %s.' % self.stderr if self.stderr.strip() != '' else ''
-        return 'Error running command: %s.%s%s%s' % (self.command, error_message, stdout, stderr)
+        super(CondaCommandError, self).__init__(
+            'Error running command: %s.%s%s%s' % (self.command, error_message, stdout, stderr))
 
 
 class CondaPackageNotFoundError(Exception):
@@ -257,9 +265,8 @@ class CondaPackageNotFoundError(Exception):
     def __int__(self, name, version):
         self.name = name
         self.version = version
-
-    def __str__(self):
-        return 'Conda package "%s" not found' % (get_install_target(self.name, self.version))
+        super(CondaPackageNotFoundError, self).__init__(
+            'Conda package "%s" not found' % (get_install_target(self.name, self.version), ))
 
 
 class CondaUnexpectedOutputError(Exception):
@@ -270,13 +277,39 @@ class CondaUnexpectedOutputError(Exception):
         self.output = output
         self.stderr = stderr
 
-    def __str__(self):
         stderr = 'stderr: %s' % self.stderr if self.stderr.strip() != '' else ''
-        return 'Unexpected output from Conda (may be due to a change in Conda\'s output format): "%output".%s' \
-               % (self.output, stderr)
+        super(CondaUnexpectedOutputError, self).__init__(
+            'Unexpected output from Conda (may be due to a change in Conda\'s output format): "%output".%s'
+            % (self.output, stderr))
 
 
-def main():
+class CondaExecutableNotFoundError(Exception):
+    """
+    Error raised when the Conda executable was not found.
+    """
+    def __init__(self):
+        super(CondaExecutableNotFoundError, self).__init__('Conda executable not found.')
+
+
+def _run_conda_command(module, command):
+    """
+    Runs the given Conda command.
+    :param module: Ansible module
+    :param command: the Conda command to run, which must return JSON
+    """
+    command = add_channels_to_command(command, module.params['channels'])
+    command = add_extras_to_command(command, module.params['extra_args'])
+
+    rc, stdout, stderr = module.run_command(command)
+    output = parse_conda_stdout(stdout)
+
+    if rc != 0 or output is None:
+        raise CondaCommandError(command, output, stdout, stderr)
+
+    return output, stderr
+
+
+def _main():
     """
     Entrypoint.
     """
@@ -295,7 +328,7 @@ def main():
         },
         supports_check_mode=True)
 
-    conda = _find_conda(module, module.params['executable'])
+    conda = find_conda(module.params['executable'])
     name = module.params['name']
     state = module.params['state']
     version = module.params['version']
@@ -303,19 +336,12 @@ def main():
     if state == 'latest' and version is not None:
         module.fail_json(msg='`version` must not be set if `state == "latest"` (`latest` upgrades to newest version)')
 
-    correct_version_installed = _check_package_installed(module, conda, name, version)
+    def command_runner(command):
+        return _run_conda_command(module, command)
 
-    if not correct_version_installed and state != 'absent':
-        _install_package(module, conda, name, version)
-
-    if state == 'absent':
-        try:
-            _uninstall_package(module, conda, name)
-        except CondaPackageNotFoundError:
-            """ EAFP """
-
-    module.exit_json(changed=False)
+    run_package_operation(
+        conda, name, version, state, module.check_mode, command_runner, module.fail_json, module.exit_json)
 
 
 if __name__ == '__main__':
-    main()
+    _main()
