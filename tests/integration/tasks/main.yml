@@ -37,3 +37,8 @@
     - include: test-invalid-setups.yml
   always:
     - include: tear-down.yml
+
+- block:
+    - include: test-failures.yml
+  always:
+    - include: tear-down.yml
