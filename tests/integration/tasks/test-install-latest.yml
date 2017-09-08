@@ -27,3 +27,25 @@
 - name: verify idempotence
   assert:
     that: not second_install.changed
+
+- block:
+    - name: install larger Conda package with dependencies
+      conda:
+        name: "{{ conda_tests_larger_install_example }}"
+        state: present
+        executable: "{{ conda_tests_conda_executable }}"
+      register: larger_install
+
+    - include: set-install-facts.yml
+      vars:
+        conda_tests_install_example: "{{ conda_tests_larger_install_example }}"
+
+    - name: verify installed
+      assert:
+        that: larger_install.changed
+        that: example_package.installed
+
+  always:
+    - include: tear-down.yml
+      vars:
+          conda_tests_install_example: "{{ conda_tests_larger_install_example }}"
