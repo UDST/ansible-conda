@@ -15,14 +15,13 @@ RUN apt-get update \
 RUN pip install setuptools wheel
 RUN pip install ansible==2.3.2.0
 
-ADD tests/requirements.yml /tmp/requirements.yml
+ADD tests/integration/requirements.yml /tmp/requirements.yml
 RUN ansible-galaxy install -r /tmp/requirements.yml
 
-ADD tests/requirements.txt /tmp/requirements.txt
+ADD tests/integration/requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 VOLUME "${DATA_DIRECTORY}"
+WORKDIR "${DATA_DIRECTORY}"
 
-CMD ansible-galaxy install -r "${DATA_DIRECTORY}/tests/requirements.yml" \
-        && pip install -r "${DATA_DIRECTORY}/tests/requirements.txt" \
-        && ansible-playbook -vvv -e ansible_python_interpreter=$(which python) -c local "${DATA_DIRECTORY}/tests/site.yml"
+CMD "${DATA_DIRECTORY}/run-tests.sh"
