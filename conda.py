@@ -193,7 +193,7 @@ def parse_conda_stdout(stdout):
     # Conda spews loading progress reports onto stdout(!?), which need ignoring. Bug observed in Conda version 4.3.25.
     split_lines = stdout.strip().split("\n")
     while len(split_lines) > 0:
-        line = split_lines.pop(0)
+        line = split_lines.pop(0).strip('\x00')
         try:
             line_content = json.loads(line)
             if "progress" not in line_content and "maxval" not in line_content:
@@ -220,9 +220,8 @@ def run_conda_package_command(command_runner, name, version, command):
     """
     try:
         return command_runner(command)
-    except CondaCommandError as e:
-        if e.output is not None and 'exception_name' in e.output \
-                and e.output['exception_name'] == 'PackageNotFoundError':
+    except CondaCommandJsonDescribedError as e:
+        if 'exception_name' in e.output and e.output['exception_name'] == 'PackageNotFoundError':
             raise CondaPackageNotFoundError(name, version)
         else:
             raise
@@ -245,17 +244,25 @@ class CondaCommandError(Exception):
     """
     Error raised when a Conda command fails.
     """
-    def __init__(self, command, output, stdout, stderr):
+    def __init__(self, command, stdout, stderr):
         self.command = command
-        self.output = output
         self.stdout = stdout
         self.stderr = stderr
 
-        error_message = ' Error: %s.' % self.output['message'] if output is not None and 'message' in output else ''
-        stdout = ' stdout: %s.' % self.stdout if error_message is '' and self.stdout.strip() != '' else ''
+        stdout = ' stdout: %s.' % self.stdout if self.stdout.strip() != '' else ''
         stderr = ' stderr: %s.' % self.stderr if self.stderr.strip() != '' else ''
+
         super(CondaCommandError, self).__init__(
-            'Error running command: %s.%s%s%s' % (self.command, error_message, stdout, stderr))
+            'Error running command: %s.%s%s' % (self.command, stdout, stderr))
+
+
+class CondaCommandJsonDescribedError(CondaCommandError):
+    """
+    Error raised when a Conda command does not output JSON.
+    """
+    def __init__(self, command, output, stderr):
+        self.output = output
+        super(CondaCommandJsonDescribedError, self).__init__(command, json.dumps(output), stderr)
 
 
 class CondaPackageNotFoundError(Exception):
@@ -303,8 +310,10 @@ def _run_conda_command(module, command):
     rc, stdout, stderr = module.run_command(command)
     output = parse_conda_stdout(stdout)
 
-    if rc != 0 or output is None:
-        raise CondaCommandError(command, output, stdout, stderr)
+    if output is None:
+        raise CondaCommandError(command, stdout, stderr)
+    if rc != 0:
+        raise CondaCommandJsonDescribedError(command, output, stderr)
 
     return output, stderr
 
