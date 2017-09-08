@@ -9,49 +9,66 @@ description:
   >
     Manage Python libraries via conda.
     Can install, update, and remove packages.
-author: Synthicity
+author: 
+  - Synthicity
+  - Colin Nolan (@colin-nolan)
 notes:
   >
     Requires conda to already be installed.
-    Will look under the home directory for a conda executable.
 options:
   name:
-    description: The name of a Python library to install
+    description: The name of a Python package to install.
     required: true
-    default: null
   version:
-    description: A specific version of a library to install
+    description: The specific version of a package to install.
     required: false
-    default: null
   state:
-    description: State in which to leave the Python package
+    description: State in which to leave the Python package. "present" will install a package of the specified version 
+                 if it is not installed (will not upgrade to latest if version is unspecified - will only install  
+                 latest); "latest" will both install and subsequently upgrade a package to the latest version on each 
+                 run; "absent" will uninstall the package if installed.
     required: false
     default: present
     choices: [ "present", "absent", "latest" ]
   channels:
-    description: Extra channels to use when installing packages
+    description: Extra channels to use when installing packages.
     required: false
-    default: null
   executable:
-    description: Full path to the conda executable
+    description: Full path to the conda executable.
     required: false
-    default: null
   extra_args:
-    description: Extra arguments passed to conda
+    description: Extra arguments passed to conda.
     required: false
-    default: null
 """
 
 EXAMPLES = """
 - name: install numpy via conda
-  conda: name=numpy state=latest
+  conda: 
+    name: numpy
+    state: latest
 
 - name: install scipy 0.14 via conda
-  conda: name=scipy version="0.14"
+  conda: 
+    name: scipy 
+    version: "0.14"
 
 - name: remove matplotlib from conda
-  conda: name=matplotlib state=absent
+  conda: 
+    name: matplotlib 
+    state: absent
 """
+
+RETURN = """
+output:
+    description: JSON output from Conda
+    returned: `changed == True`
+    type: dict
+stderr:
+    description: stderr content written by Conda
+    returned: `changed == True`
+    type: str
+"""
+
 
 from distutils.spawn import find_executable
 import os.path
@@ -80,14 +97,14 @@ def run_package_operation(conda, name, version, state, dry_run, command_runner, 
     if not correct_version_installed and state != 'absent':
         try:
             output, stderr = install_package(command_runner, conda, name, version, dry_run=dry_run)
-            on_success(changed=True, output=output, error=stderr)
+            on_success(changed=True, output=output, stderr=stderr)
         except CondaPackageNotFoundError:
             on_failure(msg='Conda package "%s" not found' % (get_install_target(name, version, )))
 
     elif state == 'absent':
         try:
             output, stderr = uninstall_package(command_runner, conda, name, dry_run=dry_run)
-            on_success(changed=True, output=output, error=stderr)
+            on_success(changed=True, output=output, stderr=stderr)
         except CondaPackageNotFoundError:
             on_success(changed=False)
 
