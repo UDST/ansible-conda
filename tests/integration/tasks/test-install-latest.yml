@@ -1,0 +1,51 @@
+---
+
+- name: install latest version of the Conda package
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: latest
+    executable: "{{ conda_tests_conda_executable }}"
+  register: first_install
+
+- include: set-install-facts.yml
+
+- name: verify installed
+  assert:
+    that: first_install.changed
+    that: example_package.installed
+    that: example_package.version | version_compare(conda_tests_minimum_latest_version, '>=')
+
+# TODO: Until tests are ran against local package repository, this test would be flaky in the (rare) case that the
+# package is updated mid-test
+- name: install latest version of the Conda package (again)
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: latest
+    executable: "{{ conda_tests_conda_executable }}"
+  register: second_install
+
+- name: verify idempotence
+  assert:
+    that: not second_install.changed
+
+- block:
+    - name: install larger Conda package with dependencies
+      conda:
+        name: "{{ conda_tests_larger_install_example }}"
+        state: present
+        executable: "{{ conda_tests_conda_executable }}"
+      register: larger_install
+
+    - include: set-install-facts.yml
+      vars:
+        conda_tests_install_example: "{{ conda_tests_larger_install_example }}"
+
+    - name: verify installed
+      assert:
+        that: larger_install.changed
+        that: example_package.installed
+
+  always:
+    - include: tear-down.yml
+      vars:
+          conda_tests_install_example: "{{ conda_tests_larger_install_example }}"

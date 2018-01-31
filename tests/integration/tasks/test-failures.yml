@@ -1,0 +1,39 @@
+---
+
+- name: install Conda packge that does not exist (expect failure)
+  conda:
+    name: this_packge_hopefully_does_not_exist
+    state: present
+    executable: "{{ conda_tests_conda_executable }}"
+  register: non_existent_install
+  ignore_errors: yes
+
+- name: verify failure
+  assert:
+    that: non_existent_install.failed
+
+- name: install Conda packge version that does not exist (expect failure)
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: present
+    version: 9999
+    executable: "{{ conda_tests_conda_executable }}"
+  register: non_existent_install
+  ignore_errors: yes
+
+- name: verify failure
+  assert:
+    that: non_existent_install.failed
+
+- name: install latest Conda packge, fixed at a specific version (expect failure)
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: latest
+    version: "{{ conda_tests_minimum_latest_version }}"
+    executable: "{{ conda_tests_conda_executable }}"
+  register: invalid_setup
+  ignore_errors: yes
+
+- name: verify failure
+  assert:
+    that: invalid_setup.failed

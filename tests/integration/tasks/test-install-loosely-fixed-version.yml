@@ -1,0 +1,59 @@
+---
+
+- name: install Conda package using major version number
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    version: "{{ conda_tests_minimum_latest_major_version }}"
+    state: present
+    executable: "{{ conda_tests_conda_executable }}"
+  register: first_install
+
+- include: set-install-facts.yml
+
+- name: verify installed
+  assert:
+    that: first_install.changed
+    that: example_package.installed
+    that: example_package.version | version_compare(conda_tests_minimum_latest_version, '>=')
+
+- name: install Conda package using major version number (again)
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    version: "{{ conda_tests_minimum_latest_major_version }}"
+    state: present
+    executable: "{{ conda_tests_conda_executable }}"
+  register: second_install
+
+- name: verify idempotence
+  assert:
+    that: not second_install.changed
+
+
+- name: verify setup for testing package upgrade
+  assert:
+    that: conda_tests_old_version.split('.')[0] == conda_tests_minimum_latest_major_version
+
+- name: install older Conda package
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    version: "{{ conda_tests_old_version }}"
+    state: present
+    executable: "{{ conda_tests_conda_executable }}"
+
+- name: upgrade Conda package
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    version: "{{ conda_tests_minimum_latest_major_version }}"
+    state: present
+    executable: "{{ conda_tests_conda_executable }}"
+  register: upgrade_install
+
+- include: set-install-facts.yml
+
+- name: verify upgrade
+  assert:
+    that: upgrade_install.changed
+    that: example_package.installed
+    that: example_package.version | version_compare(conda_tests_minimum_latest_version, '>=')
+
+

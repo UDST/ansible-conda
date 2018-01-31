@@ -1,0 +1,14 @@
+---
+
+- name: install Conda packge with fixed version but `latest` state
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    version: "{{ conda_tests_old_version }}"
+    state: latest
+    executable: "{{ conda_tests_conda_executable }}"
+  register: versioned_and_latest_install
+  ignore_errors: yes
+
+- name: verify invalid setup
+  assert:
+    that: versioned_and_latest_install.failed

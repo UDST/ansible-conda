@@ -38,7 +38,7 @@ Options (= is mandatory):
 - extra_args
         Extra arguments passed to conda [Default: None]
 
-= name
+- name
         The name of a Python library to install [Default: None]
 
 - state

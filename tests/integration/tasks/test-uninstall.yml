@@ -1,0 +1,35 @@
+---
+
+- name: install Conda package
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: latest
+    executable: "{{ conda_tests_conda_executable }}"
+  register: first_install
+
+- name: uninstall Conda package
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: absent
+    executable: "{{ conda_tests_conda_executable }}"
+  register: first_uninstall
+
+- include: set-install-facts.yml
+
+- name: verify package not installed
+  assert:
+    that: first_uninstall.changed
+    that: not example_package.installed
+
+- name: uninstall Conda package again
+  conda:
+    name: "{{ conda_tests_install_example }}"
+    state: absent
+    executable: "{{ conda_tests_conda_executable }}"
+  register: second_uninstall
+
+- include: set-install-facts.yml
+
+- name: verify idempotence
+  assert:
+    that: not second_uninstall.changed
