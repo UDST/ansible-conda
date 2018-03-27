@@ -1,0 +1,14 @@
+---
+
+supergiant_admin_user_username: admin
+# Note: Outside of testing, put this in a vault!
+supergiant_admin_user_password: password123
+
+supergiant_configure_systemctl: false
+supergiant_docker_build_temp_directory: /shared
+
+supergiant_server_install_location: /usr/bin/supergiant
+supergiant_server_config_location: /etc/supergiant/config.json
+
+supergiant_host: localhost
+supergiant_port: 8080

@@ -1,9 +1,0 @@
----
-
-- name: install apt prerequisites
-  apt:
-    name: python-pip
-
-- name: install Python prerequisites
-  pip:
-    name: jmespath

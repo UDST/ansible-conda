@@ -1,0 +1,14 @@
+ARG PYTHON_VERSION=2
+
+FROM python:${PYTHON_VERSION}
+
+RUN pip --disable-pip-version-check install \
+    ansible
+
+ENV INSTALL_DIRECTORY=/ansible-conda
+
+WORKDIR "${INSTALL_DIRECTORY}"
+ADD . .
+
+ENV PYTHONPATH="${INSTALL_DIRECTORY}"
+CMD ["python", "-m", "unittest", "discover", "-v", "-s", "tests/unit"]

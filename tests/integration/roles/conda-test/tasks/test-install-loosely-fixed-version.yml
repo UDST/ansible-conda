@@ -55,5 +55,3 @@
     that: upgrade_install.changed
     that: example_package.installed
     that: example_package.version | version_compare(conda_tests_minimum_latest_version, '>=')
-
-
