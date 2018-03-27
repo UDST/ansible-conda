@@ -238,7 +238,7 @@ def run_conda_package_command(command_runner, name, version, command):
     try:
         return command_runner(command)
     except CondaCommandJsonDescribedError as e:
-        if 'exception_name' in e.output and e.output['exception_name'] == 'PackageNotFoundError':
+        if 'exception_name' in e.output and e.output['exception_name'] in ('PackageNotFoundError', 'PackagesNotFoundError'):
             raise CondaPackageNotFoundError(name, version)
         else:
             raise
