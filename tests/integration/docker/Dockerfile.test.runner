@@ -1,0 +1,15 @@
+FROM python:3
+
+ENV ANSIBLE_HOST_KEY_CHECKING=False
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        sshpass \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ansible-conda
+ADD . .
+RUN pip --disable-pip-version-check install -r tests/integration/runner-requirements.txt
+
+WORKDIR /ansible-conda/tests/integration
+CMD ["ansible-playbook", "-i", "inventory.ini", "test.yml"]

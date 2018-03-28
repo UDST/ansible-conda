@@ -1,6 +1,0 @@
----
-
-conda_tests_python_version: 2
-conda_tests_anaconda_version: 4.4.0
-conda_tests_anaconda_installation_location: /tmp/install/anaconda
-conda_tests_conda_executable: "{{ conda_tests_anaconda_installation_location }}/bin/conda"

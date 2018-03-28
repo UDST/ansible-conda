@@ -1,0 +1,5 @@
+---
+
+- hosts: conda-testers
+  roles:
+    - name: conda-test

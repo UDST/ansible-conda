@@ -1,0 +1,23 @@
+ARG DOCKER_REPOSITORY=continuumio/miniconda3
+ARG CONDA_VERSION=4.4.10
+
+FROM ${DOCKER_REPOSITORY}:${CONDA_VERSION}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         openssh-server \
+         python \
+         python-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN sed -ri "s/^PermitRootLogin\s+.*/PermitRootLogin yes/" /etc/ssh/sshd_config \
+    && sed -ri "s/UsePAM yes/#UsePAM yes/g" /etc/ssh/sshd_config
+
+RUN mkdir /var/run/sshd
+
+ARG root_password=root
+RUN echo "root:${root_password}" | chpasswd
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]

@@ -1,0 +1,3 @@
+---
+
+conda_tests_conda_executable: "/opt/conda/bin/conda"

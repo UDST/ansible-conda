@@ -1,0 +1,20 @@
+---
+
+version: "3"
+
+services:
+  ansible-conda-unit-conda-py3-4-4-10-test-instance:
+    container_name: ansible-conda-unit-conda-py2-4-4-10-test-instance
+    build:
+      context: ../../../
+      dockerfile: tests/unit/docker/Dockerfile.test.unit
+      args:
+        PYTHON_VERSION: 2
+
+  ansible-conda-unit-conda-py2-4-4-10-test-instance:
+    container_name: ansible-conda-unit-conda-py3-4-4-10-test-instance
+    build:
+      context: ../../../
+      dockerfile: tests/unit/docker/Dockerfile.test.unit
+      args:
+        PYTHON_VERSION: 3

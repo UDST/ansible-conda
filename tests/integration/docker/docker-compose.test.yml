@@ -1,0 +1,31 @@
+---
+
+version: "3"
+
+services:
+  ansible-conda-integration-test-runner:
+    container_name: ansible-conda-integration-test-runner
+    build:
+      context: ../../../
+      dockerfile: tests/integration/docker/Dockerfile.test.runner
+    depends_on:
+      - ansible-conda-integration-conda-py3-4-4-10-test-instance
+      - ansible-conda-integration-conda-py2-4-4-10-test-instance
+
+  ansible-conda-integration-conda-py3-4-4-10-test-instance:
+    container_name: ansible-conda-integration-conda-py3-4-4-10-test-instance
+    build:
+      context: ../../../
+      dockerfile: tests/integration/docker/Dockerfile.test.integration
+      args:
+        DOCKER_REPOSITORY: continuumio/miniconda3
+        CONDA_VERSION: 4.4.10
+
+  ansible-conda-integration-conda-py2-4-4-10-test-instance:
+    container_name: ansible-conda-integration-conda-py2-4-4-10-test-instance
+    build:
+      context: ../../../
+      dockerfile: tests/integration/docker/Dockerfile.test.integration
+      args:
+        DOCKER_REPOSITORY: continuumio/miniconda
+        CONDA_VERSION: 4.4.10
