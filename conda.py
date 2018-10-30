@@ -71,6 +71,7 @@ stderr:
 
 
 from distutils.spawn import find_executable
+from distutils.version import LooseVersion
 import os.path
 import json
 from ansible.module_utils.basic import AnsibleModule
@@ -91,7 +92,7 @@ def run_package_operation(conda, name, version, state, dry_run, command_runner, 
     :param on_failure: method that takes any kwargs to be called on failure
     :param on_success: method that takes any kwargs to be called on success
     """
-    correct_version_installed = check_package_installed(command_runner, conda, name, version)
+    correct_version_installed = check_package_installed(command_runner, conda, name, version, state)
 
     # TODO: State should be an "enum" (or whatever the Py2.7 equivalent is)
     if not correct_version_installed and state != 'absent':
@@ -112,25 +113,47 @@ def run_package_operation(conda, name, version, state, dry_run, command_runner, 
         on_success(changed=False)
 
 
-def check_package_installed(command_runner, conda, name, version):
+def check_package_installed(command_runner, conda, name, version, state):
     """
     Check whether a package with the given name and version is installed.
     :param command_runner: method that executes a given Conda command (given as list of string arguments), which returns
     JSON and returns a tuple where the first argument is the outputted JSON and the second is anything written to stderr
     :param name: the name of the package to check if installed
     :param version: the version of the package to check if installed (`None` if check for latest)
+    :param state: The state the package should be in
     :return: `True` if a package with the given name and version is installed
     :raises CondaUnexpectedOutputError: if the JSON returned by Conda was unexpected
     """
-    output, stderr = run_conda_package_command(
-        command_runner, name, version, [conda, 'install', '--json', '--dry-run', get_install_target(name, version)])
+    list_output, _ = run_conda_package_command(
+        command_runner, name, version, [conda, 'list', '-f', '--json', name])
 
-    if 'message' in output and output['message'] == 'All requested packages already installed.':
-        return True
-    elif 'actions' in output and len(output['actions']) > 0:
+    if not list_output:
+        # Conda list didn't find the package installed.
         return False
-    else:
-        raise CondaUnexpectedOutputError(output, stderr)
+
+    installed_version = list_output[0]['version']
+    if state == 'present':
+        if version:
+            # Check the version matches the requested version.
+            return installed_version == version
+        else:
+            # We don't care what the version is, just that it's installed.
+            return True
+    elif state == 'latest':
+        # Use `conda search` to find the versions available.
+        latest_output, _ = run_conda_package_command(
+                command_runner, name, version, [conda, 'search', '--json', name])
+        if name in latest_output:
+            # Get the latest version and check if the installed version matches.
+            sorted_versions = sorted(latest_output[name],
+                                     key=lambda x: LooseVersion(x['version']),
+                                     reverse=True)
+            latest_version = sorted_versions[0]['version']
+            return installed_version == latest_version
+        else:
+            raise CondaPackageNotFoundError(name, version)
+
+    return False
 
 
 def install_package(command_runner, conda, name, version=None, dry_run=False):
