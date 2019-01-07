@@ -17,7 +17,8 @@ notes:
     Requires conda to already be installed.
 options:
   name:
-    description: The name of a Python package to install.
+    description: The name of a Python package to install. Can be "*" or "--all" combined with state=latest to update
+                 all packages.
     required: true
   version:
     description: The specific version of a package to install.
@@ -91,6 +92,12 @@ def run_package_operation(conda, name, version, state, dry_run, command_runner, 
     :param on_failure: method that takes any kwargs to be called on failure
     :param on_success: method that takes any kwargs to be called on success
     """
+    # Special case to update all installed packages
+    if ( name == '*' or name == '--all' ) and state == 'latest':
+        output, stderr = run_conda_package_command(
+            command_runner, '--all', None, [conda, 'update', '--json', '--all'])
+        on_success(changed=True, output=output, stderr=stderr)
+
     correct_version_installed = check_package_installed(command_runner, conda, name, version)
 
     # TODO: State should be an "enum" (or whatever the Py2.7 equivalent is)
