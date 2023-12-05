@@ -1,0 +1,8 @@
+- name: install numpy via conda
+  conda: name=numpy state=latest
+
+- name: install scipy 0.14 via conda
+  conda: name=scipy version="0.14"
+
+- name: remove matplotlib from conda
+  conda: name=matplotlib state=absent
